@@ -12,10 +12,6 @@ https://wzwzwz9394.github.io/zero-domain-defense/
 
 这个项目不需要后端服务器。仓库的 Settings -> Pages 已配置为 GitHub Actions，每次推送到 `main` 分支都会自动发布。
 
-```text
-https://你的用户名.github.io/仓库名/
-```
-
 ## 本地预览
 
 ```bash
