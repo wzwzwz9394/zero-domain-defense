@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>零域方阵 Demo</title>
-    <link rel="stylesheet" href="./styles.css?v=maps-20-2" />
+    <link rel="stylesheet" href="./styles.css?v=entry-redesign-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -103,20 +103,41 @@
       </section>
     </main>
 
-    <section id="levelSelectOverlay" class="screen-overlay" aria-label="关卡选择">
+    <section id="levelSelectOverlay" class="screen-overlay level-select-overlay" aria-label="关卡选择">
       <div class="screen-panel level-select-panel">
-        <div class="screen-heading">
-          <span class="screen-kicker">选择战区</span>
-          <h2>零域方阵</h2>
-          <p>教学演练是可选内容，可以直接跳过进入标准关。</p>
+        <div class="landing-hero">
+          <div class="landing-copy">
+            <span class="screen-kicker">自由造路塔防</span>
+            <h2>零域方阵</h2>
+            <p>部署炮塔、改变路径、守住核心。教学演练可选，标准防线默认开启。</p>
+            <div class="landing-meta" id="selectedLoadout"></div>
+            <div class="landing-actions">
+              <button id="startSelectedButton" class="command-button primary">开始作战</button>
+              <button id="skipTutorialButton" class="command-button">直接标准防线</button>
+            </div>
+          </div>
+          <div class="landing-preview" id="selectedMapPreview" aria-label="当前地图预览"></div>
         </div>
-        <div id="levelCards" class="level-grid" aria-label="关卡列表"></div>
+
+        <div class="select-block">
+          <div class="section-title">
+            <h3>关卡难度</h3>
+            <span>3 种节奏</span>
+          </div>
+          <div id="levelCards" class="level-grid" aria-label="关卡列表"></div>
+        </div>
+
         <div class="map-select-block">
-          <h3>选择地图</h3>
-          <div id="mapCards" class="map-grid" aria-label="地图列表"></div>
+          <div class="section-title">
+            <h3>地图战区</h3>
+            <span>20 张地图</span>
+          </div>
+          <div class="map-stage">
+            <div id="mapSpotlight" class="map-spotlight" aria-label="选中地图详情"></div>
+            <div id="mapCards" class="map-grid" aria-label="地图列表"></div>
+          </div>
         </div>
         <div class="screen-actions">
-          <button id="skipTutorialButton" class="command-button primary">跳过教学，进入标准防线</button>
           <button id="levelSoundButton" class="command-button">音效：开</button>
           <button id="levelCodexButton" class="command-button">查看图鉴</button>
           <button id="resumeLevelButton" class="command-button hidden">继续当前战局</button>
@@ -160,6 +181,6 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./game.js?v=maps-20-2"></script>
+    <script src="./game.js?v=entry-redesign-1"></script>
   </body>
 </html>
