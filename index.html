@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>零域方阵 Demo</title>
-    <link rel="stylesheet" href="./styles.css?v=entry-redesign-1" />
+    <link rel="stylesheet" href="./styles.css?v=entry-wizard-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -105,43 +105,67 @@
 
     <section id="levelSelectOverlay" class="screen-overlay level-select-overlay" aria-label="关卡选择">
       <div class="screen-panel level-select-panel">
-        <div class="landing-hero">
-          <div class="landing-copy">
+        <header class="entry-header">
+          <div class="entry-title">
             <span class="screen-kicker">自由造路塔防</span>
             <h2>零域方阵</h2>
-            <p>部署炮塔、改变路径、守住核心。教学演练可选，标准防线默认开启。</p>
-            <div class="landing-meta" id="selectedLoadout"></div>
-            <div class="landing-actions">
-              <button id="startSelectedButton" class="command-button primary">开始作战</button>
-              <button id="skipTutorialButton" class="command-button">直接标准防线</button>
+            <p>先选难度，再选地图，最后确认作战。</p>
+          </div>
+          <div class="entry-tools">
+            <button id="levelSoundButton" class="command-button">音效：开</button>
+            <button id="levelCodexButton" class="command-button">图鉴</button>
+            <button id="resumeLevelButton" class="command-button hidden">继续战局</button>
+          </div>
+        </header>
+
+        <nav class="entry-steps" aria-label="开始流程">
+          <button class="entry-step-pill is-current" data-entry-step="difficulty">1 难度</button>
+          <button class="entry-step-pill" data-entry-step="map">2 地图</button>
+          <button class="entry-step-pill" data-entry-step="confirm">3 确认</button>
+        </nav>
+
+        <section id="difficultyStep" class="entry-step entry-step-difficulty" aria-label="选择难度">
+          <div class="entry-page-heading">
+            <span>第 1 步</span>
+            <h3>选择关卡难度</h3>
+            <p>教学演练只是可选练习；想直接玩，选标准防线即可。</p>
+          </div>
+          <div id="levelCards" class="level-grid entry-level-grid" aria-label="关卡列表"></div>
+          <div class="entry-note">
+            <button id="skipTutorialButton" class="text-command">跳过教学，使用标准防线</button>
+          </div>
+        </section>
+
+        <section id="mapStep" class="entry-step entry-step-map hidden" aria-label="选择地图">
+          <div class="entry-page-heading">
+            <span>第 2 步</span>
+            <h3>选择地图战区</h3>
+            <p>20 张地图全部铺开。卡片只放地图形状和关键参数，详细说明放在下方。</p>
+          </div>
+          <div id="mapCards" class="map-grid entry-map-grid" aria-label="地图列表"></div>
+          <div id="mapSpotlight" class="map-spotlight entry-map-detail" aria-label="选中地图详情"></div>
+        </section>
+
+        <section id="confirmStep" class="entry-step entry-step-confirm hidden" aria-label="确认作战">
+          <div class="entry-page-heading">
+            <span>第 3 步</span>
+            <h3>确认作战配置</h3>
+            <p>确认难度和地图后进入战场，建塔和波次控制会在下一屏展开。</p>
+          </div>
+          <div class="entry-confirm-layout">
+            <div class="entry-confirm-card">
+              <h4>本局配置</h4>
+              <div class="landing-meta" id="selectedLoadout"></div>
             </div>
+            <div class="landing-preview" id="selectedMapPreview" aria-label="当前地图预览"></div>
           </div>
-          <div class="landing-preview" id="selectedMapPreview" aria-label="当前地图预览"></div>
-        </div>
+        </section>
 
-        <div class="select-block">
-          <div class="section-title">
-            <h3>关卡难度</h3>
-            <span>3 种节奏</span>
-          </div>
-          <div id="levelCards" class="level-grid" aria-label="关卡列表"></div>
-        </div>
-
-        <div class="map-select-block">
-          <div class="section-title">
-            <h3>地图战区</h3>
-            <span>20 张地图</span>
-          </div>
-          <div class="map-stage">
-            <div id="mapSpotlight" class="map-spotlight" aria-label="选中地图详情"></div>
-            <div id="mapCards" class="map-grid" aria-label="地图列表"></div>
-          </div>
-        </div>
-        <div class="screen-actions">
-          <button id="levelSoundButton" class="command-button">音效：开</button>
-          <button id="levelCodexButton" class="command-button">查看图鉴</button>
-          <button id="resumeLevelButton" class="command-button hidden">继续当前战局</button>
-        </div>
+        <footer class="entry-footer">
+          <button id="entryBackButton" class="command-button">上一步</button>
+          <button id="entryNextButton" class="command-button primary">下一步</button>
+          <button id="startSelectedButton" class="command-button primary hidden">开始作战</button>
+        </footer>
       </div>
     </section>
 
@@ -181,6 +205,6 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="./game.js?v=entry-redesign-1"></script>
+    <script src="./game.js?v=entry-wizard-1"></script>
   </body>
 </html>
