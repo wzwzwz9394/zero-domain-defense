@@ -1282,6 +1282,7 @@ const LEVELS = [
 
 const state = {
   screen: "levelSelect",
+  entryStep: "difficulty",
   levelId: "standard",
   mapId: "plain",
   lives: 20,
@@ -1350,6 +1351,12 @@ const ui = {
   levelSelect: document.querySelector("#levelSelectOverlay"),
   levelCards: document.querySelector("#levelCards"),
   mapCards: document.querySelector("#mapCards"),
+  difficultyStep: document.querySelector("#difficultyStep"),
+  mapStep: document.querySelector("#mapStep"),
+  confirmStep: document.querySelector("#confirmStep"),
+  entryBack: document.querySelector("#entryBackButton"),
+  entryNext: document.querySelector("#entryNextButton"),
+  entryStepButtons: document.querySelectorAll("[data-entry-step]"),
   startSelected: document.querySelector("#startSelectedButton"),
   selectedLoadout: document.querySelector("#selectedLoadout"),
   selectedMapPreview: document.querySelector("#selectedMapPreview"),
@@ -3552,11 +3559,12 @@ function renderUi() {
 }
 
 function renderLevelSelect() {
-  const keyValue = `${state.screen}:${state.levelId}:${state.mapId}:${state.wave}:${state.towers.length}:${state.gameOver}:${state.won}`;
+  const keyValue = `${state.screen}:${state.entryStep}:${state.levelId}:${state.mapId}:${state.wave}:${state.towers.length}:${state.gameOver}:${state.won}`;
   if (uiCache.levelSelect === keyValue) return;
   uiCache.levelSelect = keyValue;
 
   ui.levelSelect.classList.toggle("hidden", state.screen !== "levelSelect");
+  ui.levelSelect.dataset.entryStep = state.entryStep;
   const canResume =
     state.screen === "levelSelect" &&
     (state.towers.length > 0 || state.wave > 0 || state.activeWave) &&
@@ -3564,15 +3572,31 @@ function renderLevelSelect() {
     !state.won;
   ui.resumeLevel.classList.toggle("hidden", !canResume);
 
+  const steps = ["difficulty", "map", "confirm"];
+  const stepIndex = steps.indexOf(state.entryStep);
+  ui.difficultyStep.classList.toggle("hidden", state.entryStep !== "difficulty");
+  ui.mapStep.classList.toggle("hidden", state.entryStep !== "map");
+  ui.confirmStep.classList.toggle("hidden", state.entryStep !== "confirm");
+  ui.entryBack.classList.toggle("hidden", state.entryStep === "difficulty");
+  ui.entryNext.classList.toggle("hidden", state.entryStep === "confirm");
+  ui.startSelected.classList.toggle("hidden", state.entryStep !== "confirm");
+  ui.entryNext.textContent = state.entryStep === "difficulty" ? "下一步：选择地图" : "下一步：确认配置";
+  ui.entryStepButtons.forEach((button) => {
+    const index = steps.indexOf(button.dataset.entryStep);
+    button.classList.toggle("is-current", button.dataset.entryStep === state.entryStep);
+    button.classList.toggle("is-done", index >= 0 && index < stepIndex);
+  });
+
   const selectedLevel = currentLevel();
   const selectedMap = currentMap();
   ui.startSelected.textContent = selectedLevel.id === "tutorial" ? "开始教学演练" : "开始作战";
   ui.selectedLoadout.innerHTML = `
-    <span>${escapeHtml(selectedLevel.name)}</span>
-    <span>${selectedLevel.waves.length} 波</span>
-    <span>核心 ${selectedLevel.lives}</span>
-    <span>资金 ¥${selectedLevel.money}</span>
-    <span>${escapeHtml(selectedMap.name)}</span>
+    <span>难度 <strong>${escapeHtml(selectedLevel.name)}</strong></span>
+    <span>波次 <strong>${selectedLevel.waves.length}</strong></span>
+    <span>核心 <strong>${selectedLevel.lives}</strong></span>
+    <span>资金 <strong>¥${selectedLevel.money}</strong></span>
+    <span>地图 <strong>${escapeHtml(selectedMap.name)}</strong></span>
+    <span>入口 <strong>${selectedMap.entries.length}</strong></span>
   `;
   ui.selectedMapPreview.innerHTML = `
     <div class="preview-title">
@@ -3599,14 +3623,14 @@ function renderLevelSelect() {
     const isCurrent = level.id === state.levelId;
     return `
       <button class="level-choice${isCurrent ? " is-current" : ""}" data-level="${level.id}">
-        <span class="screen-kicker">${level.badge}</span>
-        <strong>${level.name}</strong>
-        <p>${level.description}</p>
+        <span class="screen-kicker">${escapeHtml(level.badge)}</span>
+        <strong>${escapeHtml(level.name)}</strong>
+        <p>${escapeHtml(level.description)}</p>
         <div class="level-meta">
           <span>${level.waves.length} 波</span>
           <span>核心 ${level.lives}</span>
           <span>资金 ¥${level.money}</span>
-          <span>${level.difficulty}</span>
+          <span>${escapeHtml(level.difficulty)}</span>
         </div>
       </button>
     `;
@@ -3621,13 +3645,13 @@ function renderLevelSelect() {
     return `
       <button class="map-choice${isCurrent ? " is-current" : ""}" data-map="${map.id}">
         <span class="map-card-preview">${mapPreviewSvg(map, "small")}</span>
-        <span class="screen-kicker">${map.badge}</span>
-        <strong>${map.name}</strong>
-        <p>${map.description}</p>
+        <span class="screen-kicker">${escapeHtml(map.badge)}</span>
+        <strong>${escapeHtml(map.name)}</strong>
+        <p>${escapeHtml(map.description)}</p>
         <div class="level-meta">
           <span>${map.entries.length} 入口</span>
           <span>核心 ${map.core.x + 1}-${map.core.y + 1}</span>
-          <span>${map.difficulty}</span>
+          <span>${escapeHtml(map.difficulty)}</span>
         </div>
       </button>
     `;
@@ -4450,9 +4474,17 @@ ui.codexButton.addEventListener("click", () => openCodex("towers"));
 ui.levelSelectButton.addEventListener("click", openLevelSelect);
 ui.reset.addEventListener("click", resetGame);
 ui.startSelected.addEventListener("click", () => startLevel(state.levelId));
+ui.entryBack.addEventListener("click", () => stepEntry(-1));
+ui.entryNext.addEventListener("click", () => stepEntry(1));
+ui.entryStepButtons.forEach((button) => {
+  button.addEventListener("click", () => setEntryStep(button.dataset.entryStep));
+});
 ui.skipTutorial.addEventListener("click", () => {
   state.levelId = "standard";
-  startLevel("standard");
+  clearBattleForMapPreview();
+  setEntryStep("map");
+  playSound("select");
+  showToast("已选择标准防线");
 });
 ui.levelSound.addEventListener("click", toggleSound);
 ui.levelCodex.addEventListener("click", () => openCodex("towers"));
@@ -4507,11 +4539,31 @@ window.addEventListener("keydown", (event) => {
 function openLevelSelect() {
   closeCodex();
   state.screen = "levelSelect";
+  state.entryStep = "difficulty";
   state.hoverCell = null;
   closeQuickMenu();
   ui.settlement.classList.add("hidden");
   uiCache.levelSelect = "";
   renderLevelSelect();
+}
+
+function setEntryStep(step) {
+  const steps = ["difficulty", "map", "confirm"];
+  if (!steps.includes(step)) return;
+  state.entryStep = step;
+  uiCache.levelSelect = "";
+  renderLevelSelect();
+  if (state.screen === "levelSelect") {
+    requestAnimationFrame(() => ui.levelSelect.scrollTo({ top: 0, behavior: "smooth" }));
+  }
+}
+
+function stepEntry(direction) {
+  const steps = ["difficulty", "map", "confirm"];
+  const index = steps.indexOf(state.entryStep);
+  const next = steps[clamp(index + direction, 0, steps.length - 1)];
+  setEntryStep(next);
+  playSound("select");
 }
 
 function selectLevel(levelId) {
@@ -4521,7 +4573,6 @@ function selectLevel(levelId) {
   clearBattleForMapPreview();
   closeQuickMenu();
   resetUiCache();
-  addLog(`关卡切换为${level.name}。`);
   playSound("select");
   showToast(`已选择关卡：${level.name}`);
   renderLevelSelect();
@@ -4534,7 +4585,6 @@ function selectMap(mapId) {
   clearBattleForMapPreview();
   closeQuickMenu();
   resetUiCache();
-  addLog(`战场切换为${currentMap().name}。`);
   playSound("select");
   showToast(`已选择地图：${currentMap().name}`);
   renderLevelSelect();
@@ -4606,6 +4656,7 @@ function startLevel(levelId, options = {}) {
   if (level.id === "tutorial") addLog("教学演练不是必经流程，可以从关卡选择直接跳过。");
   playSound(options.restart ? "select" : "wave");
   showToast(options.restart ? "重新开始" : `进入：${level.name}`);
+  renderUi();
 }
 
 function finishLevel(won) {
