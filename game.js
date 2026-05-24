@@ -1350,6 +1350,10 @@ const ui = {
   levelSelect: document.querySelector("#levelSelectOverlay"),
   levelCards: document.querySelector("#levelCards"),
   mapCards: document.querySelector("#mapCards"),
+  startSelected: document.querySelector("#startSelectedButton"),
+  selectedLoadout: document.querySelector("#selectedLoadout"),
+  selectedMapPreview: document.querySelector("#selectedMapPreview"),
+  mapSpotlight: document.querySelector("#mapSpotlight"),
   skipTutorial: document.querySelector("#skipTutorialButton"),
   levelSound: document.querySelector("#levelSoundButton"),
   levelCodex: document.querySelector("#levelCodexButton"),
@@ -1441,6 +1445,94 @@ function currentMap() {
 
 function currentWaves() {
   return currentLevel().waves;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return entities[char];
+  });
+}
+
+function previewPathFor(map, entry) {
+  const blocks = blockSet(map.blocks);
+  const target = map.core;
+  const startKey = key(entry.x, entry.y);
+  const targetKey = key(target.x, target.y);
+  const queue = [{ x: entry.x, y: entry.y }];
+  const cameFrom = new Map([[startKey, null]]);
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ];
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (current.x === target.x && current.y === target.y) break;
+    for (const [dx, dy] of dirs) {
+      const nx = current.x + dx;
+      const ny = current.y + dy;
+      const nextKey = key(nx, ny);
+      if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS || cameFrom.has(nextKey)) continue;
+      if (blocks.has(nextKey) && nextKey !== targetKey) continue;
+      cameFrom.set(nextKey, key(current.x, current.y));
+      queue.push({ x: nx, y: ny });
+    }
+  }
+
+  if (!cameFrom.has(targetKey)) return [entry, target];
+  const path = [];
+  let cursor = targetKey;
+  while (cursor) {
+    const [x, y] = cursor.split(",").map(Number);
+    path.push({ x, y });
+    cursor = cameFrom.get(cursor);
+  }
+  return path.reverse();
+}
+
+function mapPreviewSvg(map, size = "large") {
+  const unit = 10;
+  const width = COLS * unit;
+  const height = ROWS * unit;
+  const pathColors = ["#6bd39a", "#62c8dc", "#efc75e"];
+  const backgroundA = map.background?.[0] || "#101719";
+  const backgroundB = map.background?.[1] || "#151b1d";
+  const paths = map.entries
+    .map((entry, index) => {
+      const points = previewPathFor(map, entry)
+        .map((cell) => `${cell.x * unit + unit / 2},${cell.y * unit + unit / 2}`)
+        .join(" ");
+      return `<polyline points="${points}" fill="none" stroke="${pathColors[index % pathColors.length]}" stroke-width="${size === "small" ? 2.4 : 3.2}" stroke-linecap="round" stroke-linejoin="round" opacity="0.72" />`;
+    })
+    .join("");
+  const blocks = map.blocks
+    .map(([x, y]) => `<rect x="${x * unit + 1}" y="${y * unit + 1}" width="${unit - 2}" height="${unit - 2}" rx="1.5" fill="${map.blockColor}" opacity="0.94" />`)
+    .join("");
+  const entries = map.entries
+    .map((entry, index) => `<circle cx="${entry.x * unit + unit / 2}" cy="${entry.y * unit + unit / 2}" r="${size === "small" ? 3.4 : 4.4}" fill="${pathColors[index % pathColors.length]}" stroke="#071011" stroke-width="1.2" />`)
+    .join("");
+  const coreX = map.core.x * unit + unit / 2;
+  const coreY = map.core.y * unit + unit / 2;
+  return `
+    <svg class="map-preview-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(map.name)}地图缩略图">
+      <rect width="${width}" height="${height}" fill="${backgroundA}" />
+      <path d="M0 0L${width} ${height}V0Z" fill="${backgroundB}" opacity="0.72" />
+      <path d="M0 35H${width}M0 70H${width}M0 105H${width}M50 0V${height}M100 0V${height}M150 0V${height}" stroke="#ffffff" stroke-opacity="0.045" stroke-width="1" />
+      ${paths}
+      ${blocks}
+      <rect x="${coreX - 6}" y="${coreY - 6}" width="12" height="12" rx="2" fill="#f1fff8" stroke="#6bd39a" stroke-width="2" />
+      ${entries}
+    </svg>
+  `;
 }
 
 function nextLevelId() {
@@ -3426,6 +3518,7 @@ function renderUi() {
   const level = currentLevel();
   const map = currentMap();
   const waves = currentWaves();
+  document.body.classList.toggle("is-level-select", state.screen === "levelSelect");
   ui.levelSubtitle.textContent =
     state.screen === "levelSelect"
       ? `选择关卡和地图：${map.name}`
@@ -3471,6 +3564,37 @@ function renderLevelSelect() {
     !state.won;
   ui.resumeLevel.classList.toggle("hidden", !canResume);
 
+  const selectedLevel = currentLevel();
+  const selectedMap = currentMap();
+  ui.startSelected.textContent = selectedLevel.id === "tutorial" ? "开始教学演练" : "开始作战";
+  ui.selectedLoadout.innerHTML = `
+    <span>${escapeHtml(selectedLevel.name)}</span>
+    <span>${selectedLevel.waves.length} 波</span>
+    <span>核心 ${selectedLevel.lives}</span>
+    <span>资金 ¥${selectedLevel.money}</span>
+    <span>${escapeHtml(selectedMap.name)}</span>
+  `;
+  ui.selectedMapPreview.innerHTML = `
+    <div class="preview-title">
+      <strong>${escapeHtml(selectedMap.name)}</strong>
+      <span>${escapeHtml(selectedMap.badge)} / ${escapeHtml(selectedMap.difficulty)}</span>
+    </div>
+    ${mapPreviewSvg(selectedMap)}
+  `;
+  ui.mapSpotlight.innerHTML = `
+    ${mapPreviewSvg(selectedMap)}
+    <div>
+      <span class="screen-kicker">${escapeHtml(selectedMap.badge)}</span>
+      <h4>${escapeHtml(selectedMap.name)}</h4>
+    </div>
+    <p>${escapeHtml(selectedMap.description)}</p>
+    <div class="level-meta">
+      <span>${selectedMap.entries.length} 入口</span>
+      <span>核心 ${selectedMap.core.x + 1}-${selectedMap.core.y + 1}</span>
+      <span>${escapeHtml(selectedMap.difficulty)}</span>
+    </div>
+  `;
+
   ui.levelCards.innerHTML = LEVELS.map((level) => {
     const isCurrent = level.id === state.levelId;
     return `
@@ -3489,13 +3613,14 @@ function renderLevelSelect() {
   }).join("");
 
   document.querySelectorAll(".level-choice").forEach((button) => {
-    button.addEventListener("click", () => startLevel(button.dataset.level));
+    button.addEventListener("click", () => selectLevel(button.dataset.level));
   });
 
   ui.mapCards.innerHTML = MAPS.map((map) => {
     const isCurrent = map.id === state.mapId;
     return `
       <button class="map-choice${isCurrent ? " is-current" : ""}" data-map="${map.id}">
+        <span class="map-card-preview">${mapPreviewSvg(map, "small")}</span>
         <span class="screen-kicker">${map.badge}</span>
         <strong>${map.name}</strong>
         <p>${map.description}</p>
@@ -4324,7 +4449,11 @@ ui.soundButton.addEventListener("click", toggleSound);
 ui.codexButton.addEventListener("click", () => openCodex("towers"));
 ui.levelSelectButton.addEventListener("click", openLevelSelect);
 ui.reset.addEventListener("click", resetGame);
-ui.skipTutorial.addEventListener("click", () => startLevel("standard"));
+ui.startSelected.addEventListener("click", () => startLevel(state.levelId));
+ui.skipTutorial.addEventListener("click", () => {
+  state.levelId = "standard";
+  startLevel("standard");
+});
 ui.levelSound.addEventListener("click", toggleSound);
 ui.levelCodex.addEventListener("click", () => openCodex("towers"));
 ui.resumeLevel.addEventListener("click", resumeCurrentLevel);
@@ -4382,6 +4511,19 @@ function openLevelSelect() {
   closeQuickMenu();
   ui.settlement.classList.add("hidden");
   uiCache.levelSelect = "";
+  renderLevelSelect();
+}
+
+function selectLevel(levelId) {
+  const level = levelById(levelId);
+  if (state.levelId === level.id) return;
+  state.levelId = level.id;
+  clearBattleForMapPreview();
+  closeQuickMenu();
+  resetUiCache();
+  addLog(`关卡切换为${level.name}。`);
+  playSound("select");
+  showToast(`已选择关卡：${level.name}`);
   renderLevelSelect();
 }
 
